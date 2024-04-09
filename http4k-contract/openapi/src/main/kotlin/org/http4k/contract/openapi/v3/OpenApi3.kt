@@ -50,7 +50,7 @@ import org.http4k.lens.ParamMeta.FileParam
 import org.http4k.lens.ParamMeta.ObjectParam
 import org.http4k.lens.ParamMeta.StringParam
 import org.http4k.lens.WebForm
-import java.util.Locale
+import java.util.*
 
 /**
  * Contract renderer for OpenApi3 format JSON. For the JSON schema generation, naming of
@@ -143,13 +143,7 @@ class OpenApi3<NODE : Any>(
         tags: List<String>? = null
     ): ApiPath<NODE> {
         val body = requestBody()?.takeIf { it.required }
-        val parameters: List<RequestParameter<NODE>> = allRequestLenses.filter { hasMeta(it) }.map {
-            if (lensToSchema.contains(it)) {
-                PrimitiveParameter(it.meta, json {
-                    obj(lensToSchema[it]!!.entries.asIterable().map { it.toPair() })
-                })
-            } else requestParameter(it.meta)
-        }
+        val parameters: List<RequestParameter<NODE>> = allRequestLenses.flatten().map(::requestParameter)
 
         return if (method in setOf(GET, HEAD) || body == null) {
             ApiPath.NoBody(
@@ -178,8 +172,6 @@ class OpenApi3<NODE : Any>(
             )
         }
     }
-
-    private fun hasMeta(it: Lens<Request, *>) = it.count() != 0
 
     private fun RouteMeta.callbacksAsApiPaths() =
         callbacks?.mapValues { (_, callbackRoutes) ->
@@ -213,7 +205,7 @@ class OpenApi3<NODE : Any>(
     private fun requestParameter(it: Meta) = when (val paramMeta: ParamMeta = it.paramMeta) {
         ObjectParam -> SchemaParameter(it, "{}".toSchema())
         FileParam -> PrimitiveParameter(it, json {
-            obj("type" to string(FileParam.value), "format" to string("binary"))
+            obj(listOf("type" to string(FileParam.value), "format" to string("binary")))
         })
 
         is ArrayParam -> PrimitiveParameter(it, json {
@@ -242,7 +234,12 @@ class OpenApi3<NODE : Any>(
         )
 
         else -> PrimitiveParameter(it, json {
-            obj("type" to string(paramMeta.value))
+            val fields = listOf("type" to string(paramMeta.value))  + it.bag.entries.asIterable()
+                .map {
+                    val toPair = it.toPair()
+                    toPair.first to string(toPair.second.toString())
+                }
+            obj(fields)
         })
     }
 
@@ -305,7 +302,7 @@ class OpenApi3<NODE : Any>(
 
         return SchemaContent(jsonSchema, message.bodyString().safeParse())
     }
-    
+
     private fun String.toSchema(definitionId: String? = null) = safeParse()
         ?.let { apiRenderer.toSchema(it, definitionId, null) }
         ?: JsonSchema(json.obj(), emptySet())

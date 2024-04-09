@@ -7,6 +7,9 @@ open class Lens<in IN : Any, out FINAL>(
     val meta: Meta,
     private val lensGet: (IN) -> FINAL
 ) : LensExtractor<IN, FINAL>, Iterable<Meta> {
+
+    fun bag(bag: Map<String, Any>): Lens<IN, FINAL> = Lens(meta.copy(bag = bag), lensGet)
+
     override fun iterator(): Iterator<Meta> = listOf(meta).iterator()
 
     override fun toString(): String = "${if (meta.required) "Required" else "Optional"} ${meta.location} '${meta.name}'"

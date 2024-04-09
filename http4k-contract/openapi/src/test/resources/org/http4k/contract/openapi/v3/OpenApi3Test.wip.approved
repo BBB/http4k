@@ -19,7 +19,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "test"
+              "pattern": "ollie"
             },
             "in": "header",
             "name": "f",
@@ -27,6 +27,19 @@
             "description": "mappedHeader"
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "value": "abc"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/object-881980641"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
         },
         "security": [
@@ -38,6 +51,17 @@
   },
   "components": {
     "schemas": {
+      "object-881980641": {
+        "type": "object",
+        "required": [
+        ],
+        "properties": {
+          "value": {
+            "type": "string",
+            "example": "abc"
+          }
+        }
+      }
     },
     "securitySchemes": {
     }

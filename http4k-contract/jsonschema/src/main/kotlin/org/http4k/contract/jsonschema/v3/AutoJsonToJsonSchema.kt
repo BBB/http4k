@@ -35,6 +35,12 @@ class AutoJsonToJsonSchema<NODE : Any>(
         )
     }
 
+    /**
+     * {
+     *   type: string
+     * }
+     */
+
     private fun NODE.toSchema(
         value: Any,
         objName: String?,
