@@ -33,7 +33,8 @@ class ContractRoute internal constructor(
     val meta: RouteMeta,
     internal val toHandler: (ExtractedParts) -> HttpHandler
 ) : HttpHandler {
-    val nonBodyParams = meta.requestParams.plus(spec.pathLenses).flatten()
+    val allRequestLenses = meta.requestParams.plus(spec.pathLenses)
+    val nonBodyParams = allRequestLenses.flatten()
 
     val tags = meta.tags.toSet().sortedBy { it.name }
 

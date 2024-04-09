@@ -32,6 +32,7 @@ import org.http4k.core.HttpMessage
 import org.http4k.core.Method
 import org.http4k.core.Method.GET
 import org.http4k.core.Method.HEAD
+import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status.Companion.OK
 import org.http4k.core.with
@@ -39,6 +40,7 @@ import org.http4k.format.AutoMarshallingJson
 import org.http4k.format.Json
 import org.http4k.format.JsonType
 import org.http4k.lens.Header.CONTENT_TYPE
+import org.http4k.lens.Lens
 import org.http4k.lens.Meta
 import org.http4k.lens.MultipartForm
 import org.http4k.lens.ParamMeta
@@ -65,7 +67,8 @@ class OpenApi3<NODE : Any>(
     private val securityRenderer: SecurityRenderer = OpenApi3SecurityRenderer,
     private val errorResponseRenderer: ErrorResponseRenderer = JsonErrorResponseRenderer(json),
     private val servers: List<ApiServer> = emptyList(),
-    private val version: OpenApiVersion = _3_0_0
+    private val version: OpenApiVersion = _3_0_0,
+    private val lensToSchema: Map<Lens<Request, *>, Map<String, NODE>> = emptyMap()
 ) : ContractRenderer, ErrorResponseRenderer by errorResponseRenderer {
     private data class PathAndMethod<NODE>(val path: String, val method: Method, val pathSpec: ApiPath<NODE>)
 
@@ -108,7 +111,8 @@ class OpenApi3<NODE : Any>(
                         webhooks.associate {
                             it.method.name.lowercase() to it.meta.apiPath(
                                 it.method,
-                                it.meta.requestParams.map { it.meta })
+                                it.meta.requestParams
+                            )
                         }
                     },
                 version.toString()
@@ -125,7 +129,7 @@ class OpenApi3<NODE : Any>(
     private fun ContractRoute.apiPath(contractRoot: PathSegments, contractSecurity: Security?) =
         meta.apiPath(
             method,
-            nonBodyParams,
+            allRequestLenses,
             operationId(contractRoot),
             json(listOfNotNull(meta.security ?: contractSecurity).combineRef()),
             if (tags.isEmpty()) listOf(contractRoot.toString()) else tags.map { it.name }.toSet().sorted()
@@ -133,19 +137,26 @@ class OpenApi3<NODE : Any>(
 
     private fun RouteMeta.apiPath(
         method: Method,
-        nonBodyParams: List<Meta>,
+        nonBodyParams: List<Lens<Request, *>>,
         operationId: String? = null,
         security: NODE? = null,
         tags: List<String>? = null
     ): ApiPath<NODE> {
         val body = requestBody()?.takeIf { it.required }
+        val parameters: List<RequestParameter<NODE>> = nonBodyParams.map {
+            if (lensToSchema.contains(it)) {
+                PrimitiveParameter(it.meta, json {
+                    obj(lensToSchema[it]!!.entries.asIterable().map { it.toPair() })
+                })
+            } else requestParameter(it.meta)
+        }
 
         return if (method in setOf(GET, HEAD) || body == null) {
             ApiPath.NoBody(
                 summary,
                 description,
                 tags,
-                nonBodyParams.map(::requestParameter),
+                parameters,
                 responses(),
                 security,
                 operationId,
@@ -157,7 +168,7 @@ class OpenApi3<NODE : Any>(
                 summary,
                 description,
                 tags,
-                nonBodyParams.map(::requestParameter),
+                parameters,
                 body,
                 responses(),
                 security,
@@ -172,7 +183,7 @@ class OpenApi3<NODE : Any>(
         callbacks?.mapValues { (_, callbackRoutes) ->
             callbackRoutes.mapValues { (_, rcb) ->
                 mapOf(
-                    rcb.method.name.lowercase() to rcb.meta.apiPath(rcb.method, rcb.meta.requestParams.map { it.meta })
+                    rcb.method.name.lowercase() to rcb.meta.apiPath(rcb.method, rcb.meta.requestParams)
                 )
             }
         }

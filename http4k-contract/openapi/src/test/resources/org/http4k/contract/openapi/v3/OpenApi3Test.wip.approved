@@ -1,0 +1,54 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "title",
+    "version": "1.2",
+    "description": "module description"
+  },
+  "tags": [
+  ],
+  "paths": {
+    "/basepath/headers": {
+      "post": {
+        "summary": "<unknown>",
+        "description": null,
+        "tags": [
+          "/basepath"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "test"
+            },
+            "in": "header",
+            "name": "f",
+            "required": true,
+            "description": "mappedHeader"
+          }
+        ],
+        "responses": {
+        },
+        "security": [
+        ],
+        "operationId": "postBasepathHeaders",
+        "deprecated": false
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+    },
+    "securitySchemes": {
+    }
+  },
+  "servers": [
+    {
+      "url": "https://localhost:8000",
+      "description": ""
+    }
+  ],
+  "x-extension": [
+    "extensionField"
+  ]
+}
