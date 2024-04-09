@@ -137,13 +137,13 @@ class OpenApi3<NODE : Any>(
 
     private fun RouteMeta.apiPath(
         method: Method,
-        nonBodyParams: List<Lens<Request, *>>,
+        allRequestLenses: List<Lens<Request, *>>,
         operationId: String? = null,
         security: NODE? = null,
         tags: List<String>? = null
     ): ApiPath<NODE> {
         val body = requestBody()?.takeIf { it.required }
-        val parameters: List<RequestParameter<NODE>> = nonBodyParams.map {
+        val parameters: List<RequestParameter<NODE>> = allRequestLenses.filter { hasMeta(it) }.map {
             if (lensToSchema.contains(it)) {
                 PrimitiveParameter(it.meta, json {
                     obj(lensToSchema[it]!!.entries.asIterable().map { it.toPair() })
@@ -178,6 +178,8 @@ class OpenApi3<NODE : Any>(
             )
         }
     }
+
+    private fun hasMeta(it: Lens<Request, *>) = it.count() != 0
 
     private fun RouteMeta.callbacksAsApiPaths() =
         callbacks?.mapValues { (_, callbackRoutes) ->

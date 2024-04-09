@@ -1,7 +1,6 @@
 package org.http4k.contract.openapi.v3
 
 import argo.jdom.JsonNode
-import com.ubertob.kondor.json.parser.string
 import org.http4k.contract.ContractRendererContract
 import org.http4k.contract.bind
 import org.http4k.contract.contract
